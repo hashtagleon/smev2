@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SME Risk Detector{% endblock %}</title>
+  <meta name="description" content="Estimate the loan risk of a small or medium business from its profile, financials and credit history.">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <a class="brand" href="{{ url_for('index') }}" aria-label="SME Risk Detector, home">
+        <svg class="brand-mark" viewBox="0 0 36 24" width="36" height="24" aria-hidden="true">
+          <rect x="0" y="14" width="11" height="6" rx="3" fill="#4CAF86"/>
+          <rect x="12.5" y="14" width="11" height="6" rx="3" fill="#F0B429"/>
+          <rect x="25" y="14" width="11" height="6" rx="3" fill="#E4573D"/>
+          <path d="M18 2v11" stroke="#F6F7F4" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <span>SME Risk Detector</span>
+      </a>
+      {% block rail %}{% endblock %}
+      <p class="rail-foot">Gradient boosting model, 80.8% accurate on held-out test data.</p>
+    </aside>
+    <main class="work">
+      {% block work %}{% endblock %}
+    </main>
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

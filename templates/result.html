@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ result.level|capitalize }} risk - SME Risk Detector{% endblock %}
+
+{% set order = ['low', 'medium', 'high'] %}
+
+{% block rail %}
+  <div class="rail-body">
+    <p class="rail-kicker">{% if demo %}Demo applicant: {{ demo }}{% else %}Model result{% endif %}</p>
+    <h1 class="verdict verdict-{{ result.level }}">{{ result.level|capitalize }} risk</h1>
+    <p class="rail-lead">
+      The model is <strong>{{ result.confidence|pct }}</strong> sure of this call.
+      {% if result.confidence < 0.6 %}
+        That is a modest margin, so treat it as a close case.
+      {% elif result.confidence >= 0.8 %}
+        That is a clear margin over the other two levels.
+      {% endif %}
+    </p>
+    <a class="rail-link" href="{{ edit_url }}">Edit this entry</a>
+  </div>
+{% endblock %}
+
+{% block work %}
+  <header class="work-head">
+    <p class="steps" aria-label="Step 2 of 2">
+      <span class="step on"></span><span class="step on"></span>
+      <span class="steps-text">Step 2 of 2: result</span>
+    </p>
+  </header>
+
+  <section class="group" aria-labelledby="r-scale">
+    <div class="group-intro">
+      <h2 id="r-scale">Where this applicant sits</h2>
+      <p>The needle is weighted by all three probabilities, so a split result lands between zones.</p>
+    </div>
+    <div class="scale-wrap">
+      <div class="scale" role="img"
+           aria-label="Risk scale from low to high. Needle at {{ (result.scale_position * 100)|round|int }} percent, in the {{ result.level }} zone.">
+        <div class="zone zone-low"></div>
+        <div class="zone zone-medium"></div>
+        <div class="zone zone-high"></div>
+        <div class="needle" style="--pos: {{ result.scale_position|round(4) }}"></div>
+      </div>
+      <div class="scale-labels" aria-hidden="true"><span>Low</span><span>Medium</span><span>High</span></div>
+    </div>
+  </section>
+
+  <section class="group" aria-labelledby="r-prob">
+    <div class="group-intro">
+      <h2 id="r-prob">Class probabilities</h2>
+      <p>How the model splits its belief across the three levels.</p>
+    </div>
+    <ul class="probs">
+      {% for lvl in order %}
+      <li class="{{ 'top' if lvl == result.level }}">
+        <span class="prob-name">{{ lvl|capitalize }}</span>
+        <span class="prob-bar"><span class="prob-fill fill-{{ lvl }}" style="--w: {{ (result.probabilities[lvl] * 100)|round(1) }}%"></span></span>
+        <span class="prob-val">{{ result.probabilities[lvl]|pct }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="group" aria-labelledby="r-ratio">
+    <div class="group-intro">
+      <h2 id="r-ratio">Loan against the business</h2>
+      <p>Two ratios worked out from the entries below.</p>
+    </div>
+    <dl class="facts facts-big">
+      <div>
+        <dt>Loan size</dt>
+        <dd>{{ ratios.loan_to_revenue|pct(0) }} <span>of annual revenue</span></dd>
+      </div>
+      <div>
+        <dt>Collateral cover</dt>
+        <dd>{{ ratios.collateral_cover|pct(0) }} <span>of the loan amount</span></dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="group" aria-labelledby="r-in">
+    <div class="group-intro">
+      <h2 id="r-in">What was entered</h2>
+      <p>The exact values the model scored.</p>
+    </div>
+    <dl class="facts">
+      <div><dt>District</dt><dd>{{ values.district|pretty }}</dd></div>
+      <div><dt>Location type</dt><dd>{{ values.location_type|pretty }}</dd></div>
+      <div><dt>Sector</dt><dd>{{ values.sector|pretty }}</dd></div>
+      <div><dt>Business age</dt><dd>{{ values.business_age_years }} yr</dd></div>
+      <div><dt>Owner experience</dt><dd>{{ values.owner_experience_years }} yr</dd></div>
+      <div><dt>Banking relationship</dt><dd>{{ values.banking_years }} yr</dd></div>
+      <div><dt>Annual revenue</dt><dd>{{ values.annual_revenue|num }} BDT</dd></div>
+      <div><dt>Loan amount</dt><dd>{{ values.loan_amount|num }} BDT</dd></div>
+      <div><dt>Debt-to-asset ratio</dt><dd>{{ values.debt_to_asset_ratio|num }}</dd></div>
+      <div><dt>Employees</dt><dd>{{ values.num_employees|num }}</dd></div>
+      <div><dt>Collateral value</dt><dd>{{ values.collateral_value|num }} BDT</dd></div>
+      <div><dt>Past defaults</dt><dd>{{ values.past_defaults }}</dd></div>
+    </dl>
+  </section>
+
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('index') }}">Assess another applicant</a>
+    <a class="btn btn-quiet" href="{{ edit_url }}">Edit this entry</a>
+    <p class="actions-note">This is a model estimate to support a credit officer's review. It is not a lending decision.</p>
+  </div>
+{% endblock %}
