@@ -1,7 +1,12 @@
 """SME Risk Detector - Flask app.
 
 Loads the scikit-learn pipeline saved from the notebook (best_model.pkl)
-and serves a two-step flow: applicant form -> risk result.
+and serves a high-trust credit assessment flow:
+- Predictive Risk Scoring (Gradient Boosting)
+- Financial Health Ratios & 5-Pillar Credit Radar Chart
+- Bilingual Support (English & বাংলা)
+- Portfolio Analytics & Audit Logging (SQLite)
+- AI-Generated Executive Credit Memo & Policy Recommendations
 
 Run locally:   python app.py
 Run on Render: gunicorn app:app   (see Procfile / render.yaml)
@@ -15,10 +20,39 @@ from urllib.parse import urlencode
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    Response,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from sklearn.base import BaseEstimator, TransformerMixin
 
+from analytics_db import (
+    export_csv_data,
+    get_analytics_summary,
+    init_db,
+    save_assessment,
+)
+from credit_summary import generate_credit_summary
+from ratios_radar import calculate_advanced_ratios, calculate_credit_radar
+from translations import (
+    DISTRICT_MAP,
+    LOCATION_MAP,
+    SECTOR_MAP,
+    TRANSLATIONS,
+    localize,
+    localize_value,
+)
+
 BASE_DIR = Path(__file__).resolve().parent
+
+# Initialize SQLite database
+init_db()
 
 
 # --------------------------------------------------------------------------
@@ -51,12 +85,10 @@ MODEL = load_model(BASE_DIR / "best_model.pkl")
 FEATURES = json.loads((BASE_DIR / "feature_columns.json").read_text())
 CLASS_CODES = json.loads((BASE_DIR / "class_labels.json").read_text())  # [0, 1, 2]
 
-# The notebook used LabelEncoder on risk_level, which sorts alphabetically:
-# HIGH=0, LOW=1, MEDIUM=2.
+# Alphabetical sorting from training: HIGH=0, LOW=1, MEDIUM=2.
 CODE_TO_LEVEL = {0: "high", 1: "low", 2: "medium"}
 
-# Dropdown options come straight from the fitted one-hot encoder,
-# so the form can never offer a value the model has not seen.
+# Dropdown options from one-hot encoder
 _cat_cols = dict(
     (name, cols) for name, _, cols in MODEL.named_steps["pre"].transformers_ if name == "cat"
 )
@@ -64,13 +96,8 @@ _onehot = MODEL.named_steps["pre"].named_transformers_["cat"].named_steps["oneho
 CATEGORIES = {col: [str(v) for v in cats] for col, cats in zip(_cat_cols["cat"], _onehot.categories_)}
 
 
-def pretty(value):
-    text = str(value).replace("_", " ").capitalize()
-    return "Semi-urban" if text == "Semi urban" else text
-
-
 # --------------------------------------------------------------------------
-# Field definitions: one place that drives both validation and the form.
+# Field definitions
 # --------------------------------------------------------------------------
 NUMERIC_FIELDS = {
     # name: (type, min, max)
@@ -85,54 +112,56 @@ NUMERIC_FIELDS = {
     "past_defaults": (int, 0, 50),
 }
 LABELS = {
-    "district": "District",
-    "location_type": "Location type",
-    "sector": "Sector",
-    "business_age_years": "Business age",
-    "owner_experience_years": "Owner experience",
-    "banking_years": "Banking relationship",
-    "annual_revenue": "Annual revenue",
-    "loan_amount": "Loan amount",
-    "debt_to_asset_ratio": "Debt-to-asset ratio",
-    "num_employees": "Employees",
-    "collateral_value": "Collateral value",
-    "past_defaults": "Past defaults",
+    "district": "field_district",
+    "location_type": "field_location_type",
+    "sector": "field_sector",
+    "business_age_years": "field_business_age",
+    "owner_experience_years": "field_owner_exp",
+    "banking_years": "field_banking_years",
+    "annual_revenue": "field_annual_rev",
+    "loan_amount": "field_loan_amount",
+    "debt_to_asset_ratio": "field_debt_asset",
+    "num_employees": "field_employees",
+    "collateral_value": "field_collateral",
+    "past_defaults": "field_defaults",
 }
 
 
 def parse_form(data):
     """Return (clean_values, errors). Errors are keyed by field name."""
     values, errors = {}, {}
+    lang = getattr(g, "lang", "en")
     for col in FEATURES:
         raw = (data.get(col) or "").strip()
         if col in CATEGORIES:
             if raw not in CATEGORIES[col]:
-                errors[col] = f"Choose a {LABELS[col].lower()}."
+                field_name = localize(LABELS[col], lang)
+                errors[col] = f"{localize('choose_one', lang)} {field_name}."
             else:
                 values[col] = raw
             continue
 
         kind, lo, hi = NUMERIC_FIELDS[col]
         if raw == "":
-            errors[col] = "Required."
+            errors[col] = "আবশ্যক।" if lang == "bn" else "Required."
             continue
         try:
             num = float(raw.replace(",", ""))
             if not np.isfinite(num):
                 raise ValueError
             if kind is int and num != int(num):
-                errors[col] = "Use a whole number."
+                errors[col] = "পূর্ণ সংখ্যা দিন।" if lang == "bn" else "Use a whole number."
                 continue
         except ValueError:
-            errors[col] = "Enter a number."
+            errors[col] = "সঠিক সংখ্যা দিন।" if lang == "bn" else "Enter a number."
             continue
         if num < lo or num > hi:
             if col == "debt_to_asset_ratio":
-                errors[col] = "Must be between 0 and 2."
+                errors[col] = "০ থেকে ২ এর মধ্যে হতে হবে।" if lang == "bn" else "Must be between 0 and 2."
             elif num < lo:
-                errors[col] = "Cannot be negative." if lo == 0 else "Must be above zero."
+                errors[col] = "ঋণাত্মক হতে পারবে না।" if lang == "bn" else "Cannot be negative."
             else:
-                errors[col] = "That value is too large."
+                errors[col] = "মানটি অতিরিক্ত বড়।" if lang == "bn" else "That value is too large."
             continue
         values[col] = int(num) if kind is int else float(num)
     return values, errors
@@ -148,27 +177,17 @@ def predict(values):
         "level": level,
         "confidence": by_level[level],
         "probabilities": by_level,
-        # Where the needle sits on the Low -> High scale (0 = low, 1 = high),
-        # weighted by the three class probabilities.
         "scale_position": by_level["medium"] * 0.5 + by_level["high"],
     }
 
 
-def ratios(values):
-    loan, revenue, collateral = values["loan_amount"], values["annual_revenue"], values["collateral_value"]
-    return {
-        "loan_to_revenue": loan / revenue if revenue else None,
-        "collateral_cover": collateral / loan if loan else None,
-    }
-
-
 # --------------------------------------------------------------------------
-# Demo applicants. Inputs are fixed; the probabilities shown next to them are
-# computed by the real model when the app starts, never hard-coded.
+# Demo presets
 # --------------------------------------------------------------------------
 PRESETS = {
     "high": {
         "title": "Leveraged textile unit",
+        "title_bn": "উচ্চ ঋণগ্রস্ত টেক্সটাইল কারখানা",
         "values": dict(district="Khulna", location_type="semi_urban", sector="textiles",
                        business_age_years=2, owner_experience_years=20, banking_years=3,
                        annual_revenue=5850000, loan_amount=2140000, debt_to_asset_ratio=1.21,
@@ -176,6 +195,7 @@ PRESETS = {
     },
     "medium": {
         "title": "Established trading shop",
+        "title_bn": "মাঝারি ট্রেডিং ও পাইকারি প্রতিষ্ঠান",
         "values": dict(district="Sylhet", location_type="urban", sector="trading",
                        business_age_years=16, owner_experience_years=2, banking_years=7,
                        annual_revenue=3600000, loan_amount=1690000, debt_to_asset_ratio=0.69,
@@ -183,6 +203,7 @@ PRESETS = {
     },
     "low": {
         "title": "Secured agro business",
+        "title_bn": "সুরক্ষিত জামানতযুক্ত কৃষি খামার",
         "values": dict(district="Khulna", location_type="rural", sector="agriculture",
                        business_age_years=13, owner_experience_years=9, banking_years=5,
                        annual_revenue=6400000, loan_amount=2920000, debt_to_asset_ratio=0.58,
@@ -194,22 +215,74 @@ for _key, _preset in PRESETS.items():
 
 
 # --------------------------------------------------------------------------
-# App
+# App & Context Processors
 # --------------------------------------------------------------------------
 app = Flask(__name__)
-app.jinja_env.filters["pretty"] = pretty
+
+
+@app.before_request
+def detect_language():
+    lang = request.args.get("lang") or request.cookies.get("sme_lang") or "en"
+    if lang not in ("en", "bn"):
+        lang = "en"
+    g.lang = lang
+
+
+@app.context_processor
+def inject_locale_tools():
+    lang = getattr(g, "lang", "en")
+    return {
+        "lang": lang,
+        "t": lambda key, **kw: localize(key, lang, **kw),
+        "loc_val": lambda val, col: localize_value(val, col, lang),
+    }
+
+
+@app.template_filter("pretty")
+def pretty_filter(value):
+    lang = getattr(g, "lang", "en")
+    val_str = str(value)
+    if val_str in SECTOR_MAP:
+        return SECTOR_MAP[val_str].get(lang, val_str.capitalize())
+    if val_str in LOCATION_MAP:
+        return LOCATION_MAP[val_str].get(lang, val_str.capitalize())
+    if val_str in DISTRICT_MAP and lang == "bn":
+        return DISTRICT_MAP[val_str]
+    text = val_str.replace("_", " ").capitalize()
+    return "Semi-urban" if text == "Semi urban" else text
 
 
 @app.template_filter("pct")
-def pct(value, digits=1):
+def pct_filter(value, digits=1):
+    if value is None:
+        return "N/A"
     return f"{value * 100:.{digits}f}%"
 
 
 @app.template_filter("num")
-def num(value):
+def num_filter(value):
+    if value is None:
+        return "N/A"
     if isinstance(value, float) and value != int(value):
         return f"{value:,.2f}"
     return f"{int(value):,}"
+
+
+@app.template_filter("taka_fmt")
+def taka_fmt_filter(n):
+    if not n or n <= 0:
+        return "০ টাকা" if getattr(g, "lang", "en") == "bn" else "0 BDT"
+    lang = getattr(g, "lang", "en")
+    if n >= 1e7:
+        val = n / 1e7
+        unit = "কোটি টাকা" if lang == "bn" else "Crore BDT"
+        return f"{val:.2f} {unit}"
+    elif n >= 1e5:
+        val = n / 1e5
+        unit = "লাখ টাকা" if lang == "bn" else "Lakh BDT"
+        return f"{val:.2f} {unit}"
+    else:
+        return f"{n:,.0f} " + ("টাকা" if lang == "bn" else "BDT")
 
 
 def form_context(values=None, errors=None):
@@ -218,12 +291,25 @@ def form_context(values=None, errors=None):
         "presets": PRESETS,
         "values": values or {},
         "errors": errors or {},
+        "labels": LABELS,
     }
+
+
+# --------------------------------------------------------------------------
+# Routes
+# --------------------------------------------------------------------------
+@app.get("/set-language/<lang>")
+def set_language(lang):
+    if lang not in ("en", "bn"):
+        lang = "en"
+    next_url = request.args.get("next") or request.referrer or url_for("index")
+    resp = redirect(next_url)
+    resp.set_cookie("sme_lang", lang, max_age=30 * 86400, samesite="Lax")
+    return resp
 
 
 @app.get("/")
 def index():
-    # Prefill when coming back from the result page ("Edit this entry").
     values = {k: request.args[k] for k in FEATURES if k in request.args}
     return render_template("index.html", **form_context(values))
 
@@ -233,11 +319,26 @@ def predict_page():
     values, errors = parse_form(request.form)
     if errors:
         return render_template("index.html", **form_context(dict(request.form), errors)), 400
+    
     result = predict(values)
+    ratios = calculate_advanced_ratios(values)
+    radar = calculate_credit_radar(values)
+    memo = generate_credit_summary(values, result, ratios, getattr(g, "lang", "en"))
+    
+    # Save to SQLite Audit Log
+    save_assessment(values, result)
+    
     edit_url = url_for("index") + "?" + urlencode(values)
     return render_template(
-        "result.html", values=values, result=result, ratios=ratios(values),
-        labels=LABELS, edit_url=edit_url, demo=None,
+        "result.html",
+        values=values,
+        result=result,
+        ratios=ratios,
+        radar=radar,
+        memo=memo,
+        labels=LABELS,
+        edit_url=edit_url,
+        demo=None,
     )
 
 
@@ -246,10 +347,43 @@ def demo(key):
     preset = PRESETS.get(key)
     if preset is None:
         return redirect(url_for("index"))
+    
     values = preset["values"]
+    result = preset["result"]
+    ratios = calculate_advanced_ratios(values)
+    radar = calculate_credit_radar(values)
+    memo = generate_credit_summary(values, result, ratios, getattr(g, "lang", "en"))
+    
+    demo_title = preset["title_bn"] if getattr(g, "lang", "en") == "bn" else preset["title"]
+    save_assessment(values, result, demo_title=demo_title)
+    
+    edit_url = url_for("index") + "?" + urlencode(values)
     return render_template(
-        "result.html", values=values, result=preset["result"], ratios=ratios(values),
-        labels=LABELS, edit_url=url_for("index") + "?" + urlencode(values), demo=preset["title"],
+        "result.html",
+        values=values,
+        result=result,
+        ratios=ratios,
+        radar=radar,
+        memo=memo,
+        labels=LABELS,
+        edit_url=edit_url,
+        demo=demo_title,
+    )
+
+
+@app.get("/analytics")
+def analytics():
+    data = get_analytics_summary()
+    return render_template("analytics.html", **data)
+
+
+@app.get("/analytics/export")
+def analytics_export():
+    csv_text = export_csv_data()
+    return Response(
+        csv_text,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=sme_risk_audit_log.csv"}
     )
 
 
@@ -259,7 +393,16 @@ def api_predict():
     values, errors = parse_form({k: str(v) for k, v in payload.items()})
     if errors:
         return jsonify({"ok": False, "errors": errors}), 400
-    return jsonify({"ok": True, **predict(values)})
+    res = predict(values)
+    ratios = calculate_advanced_ratios(values)
+    memo = generate_credit_summary(values, res, ratios, getattr(g, "lang", "en"))
+    save_assessment(values, res, demo_title="API Request")
+    return jsonify({
+        "ok": True,
+        **res,
+        "ratios": ratios,
+        "executive_memo": memo
+    })
 
 
 @app.get("/healthz")

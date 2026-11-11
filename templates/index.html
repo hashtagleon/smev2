@@ -1,43 +1,43 @@
 {% extends "base.html" %}
 
-{% macro select(name, label, hint, options) %}
+{% macro select(name, label_key, hint_key, options) %}
   <div class="field{% if errors.get(name) %} has-error{% endif %}">
-    <label for="{{ name }}">{{ label }}</label>
+    <label for="{{ name }}">{{ t(label_key) }}</label>
     <select id="{{ name }}" name="{{ name }}" required>
-      <option value="" disabled {% if not values.get(name) %}selected{% endif %}>Choose one</option>
+      <option value="" disabled {% if not values.get(name) %}selected{% endif %}>{{ t('choose_one') }}</option>
       {% for opt in options %}
         <option value="{{ opt }}" {% if values.get(name) == opt %}selected{% endif %}>{{ opt|pretty }}</option>
       {% endfor %}
     </select>
-    <p class="hint" id="{{ name }}-hint">{{ errors.get(name) or hint }}</p>
+    <p class="hint" id="{{ name }}-hint">{{ errors.get(name) or t(hint_key) }}</p>
   </div>
 {% endmacro %}
 
-{% macro number(name, label, hint, placeholder, step="1", min="0", max=None, money=False, wide=False) %}
+{% macro number(name, label_key, hint_key, placeholder, step="1", min="0", max=None, money=False, wide=False) %}
   <div class="field{% if wide %} field-wide{% endif %}{% if errors.get(name) %} has-error{% endif %}">
-    <label for="{{ name }}">{{ label }}</label>
+    <label for="{{ name }}">{{ t(label_key) }}</label>
     <input id="{{ name }}" name="{{ name }}" type="number" inputmode="decimal"
            step="{{ step }}" min="{{ min }}" {% if max is not none %}max="{{ max }}"{% endif %}
            placeholder="{{ placeholder }}" value="{{ values.get(name, '') }}" required
            {% if money %}data-money{% endif %}>
-    <p class="hint" id="{{ name }}-hint" data-default="{{ hint }}">{{ errors.get(name) or hint }}</p>
+    <p class="hint" id="{{ name }}-hint" data-default="{{ t(hint_key) }}">{{ errors.get(name) or t(hint_key) }}</p>
   </div>
 {% endmacro %}
 
 {% block rail %}
   <div class="rail-body">
-    <h1 class="rail-title">Check an SME loan applicant</h1>
-    <p class="rail-lead">Enter the business profile, financials and credit history. The model returns a risk level and how sure it is.</p>
+    <h1 class="rail-title">{{ t('rail_form_title') }}</h1>
+    <p class="rail-lead">{{ t('rail_form_lead') }}</p>
 
-    <h2 class="rail-sub">Try a sample applicant</h2>
+    <h2 class="rail-sub">{{ t('sample_header') }}</h2>
     <ul class="samples">
       {% for key, p in presets.items() %}
       <li>
         <button type="button" class="sample" data-preset="{{ key }}" data-values='{{ p['values']|tojson }}'>
           <span class="dot dot-{{ key }}" aria-hidden="true"></span>
           <span class="sample-text">
-            <strong>{{ p.title }}</strong>
-            <span>{{ key|capitalize }} risk, {{ p.result.confidence|pct }}</span>
+            <strong>{{ p.title_bn if lang == 'bn' else p.title }}</strong>
+            <span>{{ loc_val(key, 'risk_level') }}, {{ p.result.confidence|pct }}</span>
           </span>
         </button>
       </li>
@@ -48,64 +48,71 @@
 
 {% block work %}
   <header class="work-head">
-    <p class="steps" aria-label="Step 1 of 2">
+    <p class="steps" aria-label="{{ t('step_1') }}">
       <span class="step on"></span><span class="step"></span>
-      <span class="steps-text">Step 1 of 2: applicant details</span>
+      <span class="steps-text">{{ t('step_1') }}</span>
     </p>
   </header>
 
   {% if errors %}
   <div class="alert" role="alert">
-    <strong>Check {{ errors|length }} {{ 'field' if errors|length == 1 else 'fields' }} before predicting.</strong>
-    The highlighted entries need a correction.
+    <strong>{{ t('check_fields_alert') }}</strong>
   </div>
   {% endif %}
 
   <form id="applicant-form" method="post" action="{{ url_for('predict_page') }}" novalidate>
     <section class="group" aria-labelledby="g-business">
       <div class="group-intro">
-        <h2 id="g-business">Business profile</h2>
-        <p>Where the business operates, and how long it and its owner have been at it.</p>
+        <h2 id="g-business">{{ t('sec_business') }}</h2>
+        <p>{{ t('sec_business_desc') }}</p>
       </div>
       <div class="grid">
-        {{ select("district", "District", "Each district carries its own baseline risk.", categories.district) }}
-        {{ select("location_type", "Location type", "Urban areas tend to lower the risk slightly.", categories.location_type) }}
-        {{ select("sector", "Sector", "Some sectors run riskier than others.", categories.sector) }}
-        {{ number("business_age_years", "Business age", "Years the business has operated.", "6") }}
-        {{ number("owner_experience_years", "Owner experience", "Years of experience of the main owner or manager.", "8") }}
-        {{ number("banking_years", "Banking relationship", "Years with their main bank.", "5") }}
+        {{ select("district", "field_district", "field_district_hint", categories.district) }}
+        {{ select("location_type", "field_location_type", "field_location_type_hint", categories.location_type) }}
+        {{ select("sector", "field_sector", "field_sector_hint", categories.sector) }}
+        {{ number("business_age_years", "field_business_age", "field_business_age_hint", "6") }}
+        {{ number("owner_experience_years", "field_owner_exp", "field_owner_exp_hint", "8") }}
+        {{ number("banking_years", "field_banking_years", "field_banking_years_hint", "5") }}
       </div>
     </section>
 
     <section class="group" aria-labelledby="g-fin">
       <div class="group-intro">
-        <h2 id="g-fin">Financials</h2>
-        <p>Amounts are in Bangladeshi taka (BDT).</p>
+        <h2 id="g-fin">{{ t('sec_financials') }}</h2>
+        <p>{{ t('sec_financials_desc') }}</p>
       </div>
       <div class="grid">
-        {{ number("annual_revenue", "Annual revenue (BDT)", "Total yearly sales.", "5000000", step="any", min="1", money=True) }}
-        {{ number("loan_amount", "Loan amount (BDT)", "Requested or outstanding loan.", "1200000", step="any", min="1", money=True) }}
-        {{ number("debt_to_asset_ratio", "Debt-to-asset ratio", "Total debt divided by total assets, from 0 to 2.", "0.75", step="any", min="0", max="2") }}
-        {{ number("num_employees", "Employees", "Full-time staff.", "12") }}
-        {{ number("collateral_value", "Collateral value (BDT)", "Realizable value pledged against this loan.", "900000", step="any", min="0", money=True) }}
+        {{ number("annual_revenue", "field_annual_rev", "field_annual_rev_hint", "5000000", step="any", min="1", money=True) }}
+        {{ number("loan_amount", "field_loan_amount", "field_loan_amount_hint", "1200000", step="any", min="1", money=True) }}
+        {{ number("debt_to_asset_ratio", "field_debt_asset", "field_debt_asset_hint", "0.75", step="any", min="0", max="2") }}
+        {{ number("num_employees", "field_employees", "field_employees_hint", "12") }}
+        {{ number("collateral_value", "field_collateral", "field_collateral_hint", "900000", step="any", min="0", money=True) }}
       </div>
     </section>
 
     <section class="group" aria-labelledby="g-credit">
       <div class="group-intro">
-        <h2 id="g-credit">Credit history</h2>
-        <p>Serious delinquencies and write-offs on record.</p>
+        <h2 id="g-credit">{{ t('sec_security') }}</h2>
+        <p>{{ t('sec_security_desc') }}</p>
       </div>
       <div class="grid">
-        {{ number("past_defaults", "Past defaults", "Number of defaults or write-offs.", "0") }}
+        {{ number("past_defaults", "field_defaults", "field_defaults_hint", "0") }}
       </div>
     </section>
 
     <div class="actions">
-      <button type="submit" class="btn btn-primary">Predict risk</button>
-      <a class="btn btn-quiet" id="demo-link" href="{{ url_for('demo', key='high') }}">View demo result</a>
-      <button type="button" class="btn btn-text" id="clear-btn">Clear form</button>
-      <p class="actions-note">The next page shows the risk level, class probabilities and confidence.</p>
+      <button type="submit" class="btn btn-primary">{{ t('btn_predict') }}</button>
+      <a class="btn btn-quiet" id="demo-link" href="{{ url_for('demo', key='high') }}">
+        {% if lang == 'bn' %}নমুনা ফলাফল দেখুন{% else %}View demo result{% endif %}
+      </a>
+      <button type="button" class="btn btn-text" id="clear-btn">{{ t('btn_clear') }}</button>
+      <p class="actions-note">
+        {% if lang == 'bn' %}
+          পরবর্তী পাতায় বিস্তারিত ঝুঁকি বিশ্লেষণ, ক্রেডিট রাডার চার্ট ও এআই এক্সিকিউটিভ মেমো প্রদর্শিত হবে।
+        {% else %}
+          The next page generates a comprehensive credit memo, 5-pillar radar chart, and risk probabilities.
+        {% endif %}
+      </p>
     </div>
   </form>
 {% endblock %}

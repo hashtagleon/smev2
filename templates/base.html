@@ -1,28 +1,53 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}SME Risk Detector{% endblock %}</title>
-  <meta name="description" content="Estimate the loan risk of a small or medium business from its profile, financials and credit history.">
+  <title>{% block title %}{{ t('app_title') }}{% endblock %}</title>
+  <meta name="description" content="Predictive SME loan credit risk scoring, financial health ratios, and automated AI credit memo.">
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
   <div class="shell">
     <aside class="rail">
-      <a class="brand" href="{{ url_for('index') }}" aria-label="SME Risk Detector, home">
-        <svg class="brand-mark" viewBox="0 0 36 24" width="36" height="24" aria-hidden="true">
-          <rect x="0" y="14" width="11" height="6" rx="3" fill="#4CAF86"/>
-          <rect x="12.5" y="14" width="11" height="6" rx="3" fill="#F0B429"/>
-          <rect x="25" y="14" width="11" height="6" rx="3" fill="#E4573D"/>
-          <path d="M18 2v11" stroke="#F6F7F4" stroke-width="2.4" stroke-linecap="round"/>
-        </svg>
-        <span>SME Risk Detector</span>
-      </a>
+      <div class="rail-top">
+        <a class="brand" href="{{ url_for('index') }}" aria-label="{{ t('app_title') }}, home">
+          <svg class="brand-mark" viewBox="0 0 36 24" width="36" height="24" aria-hidden="true">
+            <rect x="0" y="14" width="11" height="6" rx="3" fill="#4CAF86"/>
+            <rect x="12.5" y="14" width="11" height="6" rx="3" fill="#F0B429"/>
+            <rect x="25" y="14" width="11" height="6" rx="3" fill="#E4573D"/>
+            <path d="M18 2v11" stroke="#F6F7F4" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+          <span>{{ t('app_title') }}</span>
+        </a>
+
+        <div class="lang-switch" role="group" aria-label="Language selection">
+          <a href="{{ url_for('set_language', lang='en', next=request.full_path) }}"
+             class="lang-btn {% if lang == 'en' %}active{% endif %}"
+             title="English">EN</a>
+          <a href="{{ url_for('set_language', lang='bn', next=request.full_path) }}"
+             class="lang-btn {% if lang == 'bn' %}active{% endif %}"
+             title="বাংলা">বাং</a>
+        </div>
+      </div>
+
+      <nav class="rail-nav" aria-label="Main navigation">
+        <a href="{{ url_for('index') }}"
+           class="rail-nav-link {% if request.endpoint in ('index', 'predict_page', 'demo') %}active{% endif %}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+          {{ t('nav_assess') }}
+        </a>
+        <a href="{{ url_for('analytics') }}"
+           class="rail-nav-link {% if request.endpoint == 'analytics' %}active{% endif %}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          {{ t('nav_analytics') }}
+        </a>
+      </nav>
+
       {% block rail %}{% endblock %}
     </aside>
     <main class="work">

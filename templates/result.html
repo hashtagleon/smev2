@@ -1,36 +1,172 @@
 {% extends "base.html" %}
-{% block title %}{{ result.level|capitalize }} risk - SME Risk Detector{% endblock %}
+{% block title %}{{ loc_val(result.level, 'risk_level') }} - {{ t('app_title') }}{% endblock %}
 
 {% set order = ['low', 'medium', 'high'] %}
 
 {% block rail %}
   <div class="rail-body">
-    <p class="rail-kicker">{% if demo %}Demo applicant: {{ demo }}{% else %}Model result{% endif %}</p>
-    <h1 class="verdict verdict-{{ result.level }}">{{ result.level|capitalize }} risk</h1>
+    <p class="rail-kicker">{% if demo %}{{ demo }}{% else %}{{ t('app_title') }}{% endif %}</p>
+    <h1 class="verdict verdict-{{ result.level }}">{{ loc_val(result.level, 'risk_level') }}</h1>
     <p class="rail-lead">
-      The model is <strong>{{ result.confidence|pct }}</strong> sure of this call.
+      {{ t('confidence_lead', pct=(result.confidence|pct)) }}
       {% if result.confidence < 0.6 %}
-        That is a modest margin, so treat it as a close case.
+        {{ t('confidence_close') }}
       {% elif result.confidence >= 0.8 %}
-        That is a clear margin over the other two levels.
+        {{ t('confidence_clear') }}
       {% endif %}
     </p>
-    <a class="rail-link" href="{{ edit_url }}">Edit this entry</a>
+    <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 8px;">
+      <a class="rail-link" href="{{ edit_url }}">{{ t('btn_edit') }}</a>
+      <a class="rail-link" href="{{ url_for('analytics') }}" style="color: var(--on-river-soft); font-weight: 500;">
+        &rarr; {{ t('nav_analytics') }}
+      </a>
+    </div>
   </div>
 {% endblock %}
 
 {% block work %}
   <header class="work-head">
-    <p class="steps" aria-label="Step 2 of 2">
+    <p class="steps" aria-label="{{ t('step_2') }}">
       <span class="step on"></span><span class="step on"></span>
-      <span class="steps-text">Step 2 of 2: result</span>
+      <span class="steps-text">{{ t('step_2') }}</span>
     </p>
   </header>
 
+  <!-- Feature 8: AI-Generated Executive Credit Memo & Insights -->
+  <section class="group" aria-labelledby="r-memo">
+    <div class="group-intro">
+      <h2 id="r-memo">{{ t('ai_memo_title') }}</h2>
+      <p>{{ t('ai_memo_desc') }}</p>
+    </div>
+    <div class="memo-card">
+      <div class="memo-header">
+        <span class="memo-tag">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Credit Appraisal Memo
+        </span>
+        <span class="badge badge-{{ result.level }}">
+          {{ loc_val(result.level, 'risk_level') }}
+        </span>
+      </div>
+      <div class="memo-body">
+        <blockquote class="memo-narrative">
+          &ldquo;{{ memo.narrative }}&rdquo;
+        </blockquote>
+
+        <div class="memo-two-col">
+          <div>
+            <h3 class="memo-block-title title-strengths">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              {{ t('strengths_title') }}
+            </h3>
+            <ul class="memo-list memo-list-green">
+              {% for s in memo.strengths %}
+              <li>{{ s }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div>
+            <h3 class="memo-block-title title-risks">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              {{ t('risks_title') }}
+            </h3>
+            <ul class="memo-list memo-list-amber">
+              {% for r in memo.risks %}
+              <li>{{ r }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+
+        <div class="memo-recommendation">
+          <strong>{{ t('recommendation_title') }}</strong>
+          <p>{{ memo.recommendation }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature 5: 5-Pillar Credit Radar & Financial Metrics -->
+  <section class="group" aria-labelledby="r-radar">
+    <div class="group-intro">
+      <h2 id="r-radar">{{ t('radar_title') }}</h2>
+      <p>{{ t('radar_desc') }}</p>
+    </div>
+    <div style="display: grid; gap: 20px;">
+      <div class="radar-box">
+        <div class="radar-svg-wrap">
+          <svg class="radar-svg" viewBox="0 0 340 300" aria-label="5-Pillar Credit Radar Chart">
+            <!-- Background Web Rings -->
+            {% for ring in radar.grid_rings %}
+            <polygon points="{{ ring }}" fill="none" stroke="#d5dfdb" stroke-width="1" stroke-dasharray="3 3"/>
+            {% endfor %}
+            <!-- Axis Spokes -->
+            {% for sp in radar.spokes %}
+            <line x1="{{ sp.x1 }}" y1="{{ sp.y1 }}" x2="{{ sp.x2 }}" y2="{{ sp.y2 }}" stroke="#c2d1cc" stroke-width="1.2"/>
+            {% endfor %}
+            <!-- Data Polygon -->
+            <polygon points="{{ radar.data_polygon }}"
+                     fill="rgba(47, 140, 102, 0.28)"
+                     stroke="#2f8c66"
+                     stroke-width="2.5"
+                     stroke-linejoin="round"/>
+            <!-- Vertices & Data Points -->
+            {% for v in radar.vertices %}
+            <circle cx="{{ v.x }}" cy="{{ v.y }}" r="5" fill="#123c3a" stroke="#fff" stroke-width="2"/>
+            <text x="{{ v.lx }}" y="{{ v.ly }}" text-anchor="middle" font-size="11" font-weight="600" fill="#17221f">
+              {{ t(v.key) }} ({{ v.score }})
+            </text>
+            {% endfor %}
+          </svg>
+        </div>
+        <div class="radar-legend">
+          {% for p in radar.pillars %}
+          <div class="pillar-card">
+            <span><strong>{{ t(p.key) }}</strong></span>
+            <span class="pillar-score-badge">{{ p.score }}/100</span>
+          </div>
+          {% endfor %}
+          <div class="pillar-card" style="background: #eef5f2; border: 1px solid #c8ded5;">
+            <span><strong>{{ t('metric_resilience') }}</strong></span>
+            <span class="pillar-score-badge" style="color: var(--river); font-weight: 800;">
+              {{ ratios.health_score }}/100 ({{ ratios.health_tier|capitalize }})
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Financial Health Metrics Grid -->
+      <div class="metrics-row">
+        <div class="metric-tile">
+          <span class="metric-tile-title">{{ t('metric_loan_rev') }}</span>
+          <span class="metric-tile-val">{{ ratios.loan_to_revenue|pct(0) }}</span>
+          <span class="metric-tile-sub">{% if lang == 'bn' %}বার্ষিক আয়ের অনুপাত{% else %}of annual gross turnover{% endif %}</span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-tile-title">{{ t('metric_collateral_cov') }}</span>
+          <span class="metric-tile-val">{{ ratios.collateral_cover|pct(0) }}</span>
+          <span class="metric-tile-sub">
+            {% if ratios.ltv %}
+              LTV: {{ ratios.ltv|pct(0) }}
+            {% else %}
+              {% if lang == 'bn' %}জামানতহীন{% else %}Unsecured{% endif %}
+            {% endif %}
+          </span>
+        </div>
+        <div class="metric-tile">
+          <span class="metric-tile-title">{{ t('metric_rev_per_emp') }}</span>
+          <span class="metric-tile-val">{{ ratios.rev_per_employee|taka_fmt }}</span>
+          <span class="metric-tile-sub">{% if lang == 'bn' %}কর্মী প্রতি উৎপাদনশীলতা{% else %}productivity per FTE employee{% endif %}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Continuous Spectrum Scale -->
   <section class="group" aria-labelledby="r-scale">
     <div class="group-intro">
-      <h2 id="r-scale">Where this applicant sits</h2>
-      <p>The needle is weighted by all three probabilities, so a split result lands between zones.</p>
+      <h2 id="r-scale">{{ t('risk_scale_title') }}</h2>
+      <p>{{ t('risk_scale_desc') }}</p>
     </div>
     <div class="scale-wrap">
       <div class="scale" role="img"
@@ -40,19 +176,24 @@
         <div class="zone zone-high"></div>
         <div class="needle" style="--pos: {{ result.scale_position|round(4) }}"></div>
       </div>
-      <div class="scale-labels" aria-hidden="true"><span>Low</span><span>Medium</span><span>High</span></div>
+      <div class="scale-labels" aria-hidden="true">
+        <span>{{ loc_val('low', 'risk_level') }}</span>
+        <span>{{ loc_val('medium', 'risk_level') }}</span>
+        <span>{{ loc_val('high', 'risk_level') }}</span>
+      </div>
     </div>
   </section>
 
+  <!-- Probabilities -->
   <section class="group" aria-labelledby="r-prob">
     <div class="group-intro">
-      <h2 id="r-prob">Class probabilities</h2>
-      <p>How the model splits its belief across the three levels.</p>
+      <h2 id="r-prob">{{ t('class_probs_title') }}</h2>
+      <p>{{ t('class_probs_desc') }}</p>
     </div>
     <ul class="probs">
       {% for lvl in order %}
       <li class="{{ 'top' if lvl == result.level }}">
-        <span class="prob-name">{{ lvl|capitalize }}</span>
+        <span class="prob-name">{{ loc_val(lvl, 'risk_level') }}</span>
         <span class="prob-bar"><span class="prob-fill fill-{{ lvl }}" style="--w: {{ (result.probabilities[lvl] * 100)|round(1) }}%"></span></span>
         <span class="prob-val">{{ result.probabilities[lvl]|pct }}</span>
       </li>
@@ -60,47 +201,38 @@
     </ul>
   </section>
 
-  <section class="group" aria-labelledby="r-ratio">
-    <div class="group-intro">
-      <h2 id="r-ratio">Loan against the business</h2>
-      <p>Two ratios worked out from the entries below.</p>
-    </div>
-    <dl class="facts facts-big">
-      <div>
-        <dt>Loan size</dt>
-        <dd>{{ ratios.loan_to_revenue|pct(0) }} <span>of annual revenue</span></dd>
-      </div>
-      <div>
-        <dt>Collateral cover</dt>
-        <dd>{{ ratios.collateral_cover|pct(0) }} <span>of the loan amount</span></dd>
-      </div>
-    </dl>
-  </section>
-
+  <!-- Summary of Inputs -->
   <section class="group" aria-labelledby="r-in">
     <div class="group-intro">
-      <h2 id="r-in">What was entered</h2>
-      <p>The exact values the model scored.</p>
+      <h2 id="r-in">{{ t('entered_values_title') }}</h2>
+      <p>{{ t('entered_values_desc') }}</p>
     </div>
     <dl class="facts">
-      <div><dt>District</dt><dd>{{ values.district|pretty }}</dd></div>
-      <div><dt>Location type</dt><dd>{{ values.location_type|pretty }}</dd></div>
-      <div><dt>Sector</dt><dd>{{ values.sector|pretty }}</dd></div>
-      <div><dt>Business age</dt><dd>{{ values.business_age_years }} yr</dd></div>
-      <div><dt>Owner experience</dt><dd>{{ values.owner_experience_years }} yr</dd></div>
-      <div><dt>Banking relationship</dt><dd>{{ values.banking_years }} yr</dd></div>
-      <div><dt>Annual revenue</dt><dd>{{ values.annual_revenue|num }} BDT</dd></div>
-      <div><dt>Loan amount</dt><dd>{{ values.loan_amount|num }} BDT</dd></div>
-      <div><dt>Debt-to-asset ratio</dt><dd>{{ values.debt_to_asset_ratio|num }}</dd></div>
-      <div><dt>Employees</dt><dd>{{ values.num_employees|num }}</dd></div>
-      <div><dt>Collateral value</dt><dd>{{ values.collateral_value|num }} BDT</dd></div>
-      <div><dt>Past defaults</dt><dd>{{ values.past_defaults }}</dd></div>
+      <div><dt>{{ t('field_district') }}</dt><dd>{{ loc_val(values.district, 'district') }}</dd></div>
+      <div><dt>{{ t('field_location_type') }}</dt><dd>{{ loc_val(values.location_type, 'location_type') }}</dd></div>
+      <div><dt>{{ t('field_sector') }}</dt><dd>{{ loc_val(values.sector, 'sector') }}</dd></div>
+      <div><dt>{{ t('field_business_age') }}</dt><dd>{{ values.business_age_years }} {% if lang == 'bn' %}বছর{% else %}yr{% endif %}</dd></div>
+      <div><dt>{{ t('field_owner_exp') }}</dt><dd>{{ values.owner_experience_years }} {% if lang == 'bn' %}বছর{% else %}yr{% endif %}</dd></div>
+      <div><dt>{{ t('field_banking_years') }}</dt><dd>{{ values.banking_years }} {% if lang == 'bn' %}বছর{% else %}yr{% endif %}</dd></div>
+      <div><dt>{{ t('field_annual_rev') }}</dt><dd>{{ values.annual_revenue|taka_fmt }}</dd></div>
+      <div><dt>{{ t('field_loan_amount') }}</dt><dd>{{ values.loan_amount|taka_fmt }}</dd></div>
+      <div><dt>{{ t('field_debt_asset') }}</dt><dd>{{ values.debt_to_asset_ratio|num }}</dd></div>
+      <div><dt>{{ t('field_employees') }}</dt><dd>{{ values.num_employees|num }}</dd></div>
+      <div><dt>{{ t('field_collateral') }}</dt><dd>{{ values.collateral_value|taka_fmt }}</dd></div>
+      <div><dt>{{ t('field_defaults') }}</dt><dd>{{ values.past_defaults }}</dd></div>
     </dl>
   </section>
 
   <div class="actions">
-    <a class="btn btn-primary" href="{{ url_for('index') }}">Assess another applicant</a>
-    <a class="btn btn-quiet" href="{{ edit_url }}">Edit this entry</a>
-    <p class="actions-note">This is a model estimate to support a credit officer's review. It is not a lending decision.</p>
+    <a class="btn btn-primary" href="{{ url_for('index') }}">{{ t('btn_new') }}</a>
+    <a class="btn btn-quiet" href="{{ edit_url }}">{{ t('btn_edit') }}</a>
+    <a class="btn btn-quiet" href="{{ url_for('analytics') }}">{{ t('nav_analytics') }}</a>
+    <p class="actions-note">
+      {% if lang == 'bn' %}
+        মূল্যায়নটি স্বয়ংক্রিয়ভাবে অডিট লগ ডেটাবেসে সংরক্ষিত হয়েছে।
+      {% else %}
+        This appraisal is logged in the portfolio audit database to support committee reviews.
+      {% endif %}
+    </p>
   </div>
 {% endblock %}

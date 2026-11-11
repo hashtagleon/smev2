@@ -203,9 +203,364 @@ input:focus-visible, select:focus-visible { outline: 3px solid var(--marigold); 
 .facts-big dd { font: 700 2.4rem/1.1 var(--display); text-align: left; margin-top: 2px; }
 .facts-big dd span { font: 400 0.95rem var(--body); color: var(--ink-soft); }
 
+/* ---------- Rail Top & Language Switcher ---------- */
+.rail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--river-line);
+}
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  background: var(--river-deep);
+  border: 1px solid var(--river-line);
+  border-radius: 20px;
+  padding: 3px;
+  gap: 2px;
+}
+.lang-btn {
+  padding: 3px 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--on-river-soft);
+  text-decoration: none;
+  border-radius: 14px;
+  transition: all 0.15s;
+}
+.lang-btn:hover { color: #fff; }
+.lang-btn.active {
+  background: var(--marigold);
+  color: var(--river-deep);
+}
+
+.rail-nav {
+  margin-top: 20px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rail-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--on-river-soft);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.05);
+  transition: background 0.15s, color 0.15s;
+}
+.rail-nav-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.rail-nav-link.active {
+  background: #fff;
+  color: var(--river);
+}
+
+/* ---------- 5-Pillar Credit Radar & Financial Metrics ---------- */
+.radar-box {
+  background: #fff;
+  border: 1px solid #d9dfda;
+  border-radius: 14px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: center;
+}
+.radar-svg-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.radar-svg {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  overflow: visible;
+}
+.radar-legend {
+  display: grid;
+  gap: 10px;
+}
+.pillar-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--mist);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+.pillar-card strong { color: var(--ink); }
+.pillar-score-badge {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid #d9dfda;
+}
+
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+.metric-tile {
+  background: #fff;
+  border: 1px solid #d9dfda;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.metric-tile-title {
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+}
+.metric-tile-val {
+  font: 700 1.65rem/1.1 var(--display);
+  color: var(--ink);
+}
+.metric-tile-sub {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+.health-tier-robust { color: var(--low); }
+.health-tier-moderate { color: var(--medium); }
+.health-tier-vulnerable { color: var(--high); }
+
+/* ---------- AI Executive Credit Memo ---------- */
+.memo-card {
+  background: #fff;
+  border: 1px solid #d5dfdb;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+.memo-header {
+  background: var(--field);
+  padding: 16px 22px;
+  border-bottom: 1px solid #d9dfda;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.memo-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--river);
+}
+.memo-body {
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+.memo-narrative {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #243330;
+  padding-left: 18px;
+  border-left: 4px solid var(--marigold);
+  margin: 0;
+  font-style: italic;
+}
+.memo-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.memo-block-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.title-strengths { color: var(--low); }
+.title-risks { color: var(--high); }
+.memo-list {
+  display: grid;
+  gap: 8px;
+}
+.memo-list li {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--mist);
+}
+.memo-list-green li { border-left: 3px solid var(--low); }
+.memo-list-amber li { border-left: 3px solid var(--high); }
+.memo-recommendation {
+  background: #fdfaf2;
+  border: 1px solid #fae8be;
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.memo-recommendation strong {
+  display: block;
+  font-size: 0.94rem;
+  color: #7a4f00;
+  margin-bottom: 6px;
+}
+.memo-recommendation p {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #4b360a;
+}
+
+/* ---------- Analytics & Audit Log Dashboard ---------- */
+.analytics-hero {
+  margin-bottom: 32px;
+}
+.analytics-title {
+  font: 800 2.2rem/1.1 var(--display);
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.analytics-sub {
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font-size: 1rem;
+}
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 32px;
+}
+.kpi-card {
+  background: #fff;
+  border: 1px solid #d9dfda;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kpi-card .kpi-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.kpi-card .kpi-num {
+  font: 700 2.2rem/1 var(--display);
+  color: var(--ink);
+}
+.kpi-card .kpi-sub {
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+}
+
+.analytics-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.panel {
+  background: #fff;
+  border: 1px solid #d9dfda;
+  border-radius: 12px;
+  padding: 24px;
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.panel-title {
+  font: 700 1.2rem/1.2 var(--display);
+  color: var(--ink);
+}
+.dist-bars {
+  display: flex;
+  height: 24px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.dist-bar-item {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  transition: width 0.3s;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.92rem;
+}
+.data-table th {
+  padding: 12px 14px;
+  background: var(--mist);
+  color: var(--ink-soft);
+  font-weight: 600;
+  border-bottom: 2px solid #d9dfda;
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e7ece8;
+  vertical-align: middle;
+}
+.data-table tr:hover td {
+  background: #fbfcfb;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-low { background: #e0f2eb; color: var(--low); }
+.badge-medium { background: #fff5da; color: #b37e00; }
+.badge-high { background: #fde8e5; color: var(--high); }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .radar-box { grid-template-columns: 1fr; }
 }
 @media (max-width: 900px) {
   .shell { grid-template-columns: 1fr; }
@@ -215,9 +570,14 @@ input:focus-visible, select:focus-visible { outline: 3px solid var(--marigold); 
   .rail-foot { display: none; }
   .group { grid-template-columns: 1fr; gap: 18px; }
   .group-intro p { max-width: 48ch; }
+  .analytics-split { grid-template-columns: 1fr; }
+  .memo-two-col { grid-template-columns: 1fr; }
+  .metrics-row { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 560px) {
   .grid, .facts { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: 1fr; }
+  .metrics-row { grid-template-columns: 1fr; }
   .btn { flex: 1 1 100%; }
   .btn-text { flex: 0 0 auto; }
   .probs li { grid-template-columns: 64px 1fr 56px; gap: 10px; }

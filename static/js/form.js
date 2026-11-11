@@ -2,19 +2,27 @@
   var form = document.getElementById("applicant-form");
   if (!form) return;
 
+  var isBn = document.documentElement.lang === "bn";
   var samples = Array.prototype.slice.call(document.querySelectorAll(".sample"));
   var demoLink = document.getElementById("demo-link");
-  var demoBase = demoLink.getAttribute("href").replace(/high$/, "");
+  var demoBase = demoLink ? demoLink.getAttribute("href").replace(/high$/, "") : "";
 
-  // ---- Money readout in lakh / crore ----
+  // ---- Money readout in lakh / crore (bilingual) ----
   function words(n) {
     if (!isFinite(n) || n <= 0) return "";
     var v, unit;
-    if (n >= 1e7) { v = n / 1e7; unit = "crore"; }
-    else if (n >= 1e5) { v = n / 1e5; unit = "lakh"; }
-    else return n.toLocaleString("en-US", { maximumFractionDigits: 2 }) + " taka";
-    return "About " + (Math.round(v * 100) / 100) + " " + unit + " taka";
+    if (n >= 1e7) {
+      v = (n / 1e7).toFixed(2).replace(/\.00$/, "");
+      unit = isBn ? " কোটি টাকা" : " crore taka";
+    } else if (n >= 1e5) {
+      v = (n / 1e5).toFixed(2).replace(/\.00$/, "");
+      unit = isBn ? " লাখ টাকা" : " lakh taka";
+    } else {
+      return (isBn ? "প্রায় " : "About ") + n.toLocaleString(isBn ? "bn-BD" : "en-US") + (isBn ? " টাকা" : " taka");
+    }
+    return (isBn ? "প্রায় " : "About ") + v + unit;
   }
+
   function updateMoney(input) {
     var hint = document.getElementById(input.id + "-hint");
     if (!hint || input.closest(".has-error")) return;
@@ -22,6 +30,7 @@
     hint.textContent = text || hint.getAttribute("data-default");
     hint.classList.toggle("money-readout", !!text);
   }
+
   var moneyInputs = form.querySelectorAll("input[data-money]");
   Array.prototype.forEach.call(moneyInputs, function (el) {
     el.addEventListener("input", function () { updateMoney(el); });
@@ -45,7 +54,7 @@
   // ---- Sample applicants ----
   function setPressed(btn) {
     samples.forEach(function (s) { s.setAttribute("aria-pressed", s === btn ? "true" : "false"); });
-    if (btn) demoLink.setAttribute("href", demoBase + btn.getAttribute("data-preset"));
+    if (btn && demoLink) demoLink.setAttribute("href", demoBase + btn.getAttribute("data-preset"));
   }
   samples.forEach(function (btn) {
     btn.setAttribute("aria-pressed", "false");
@@ -61,19 +70,22 @@
   });
 
   // ---- Clear ----
-  document.getElementById("clear-btn").addEventListener("click", function () {
-    Array.prototype.forEach.call(form.elements, function (el) {
-      if (el.name) el.value = "";
+  var clearBtn = document.getElementById("clear-btn");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", function () {
+      Array.prototype.forEach.call(form.elements, function (el) {
+        if (el.name) el.value = "";
+      });
+      Array.prototype.forEach.call(form.querySelectorAll(".has-error"), function (f) { f.classList.remove("has-error"); });
+      Array.prototype.forEach.call(moneyInputs, function (el) {
+        var hint = document.getElementById(el.id + "-hint");
+        hint.textContent = hint.getAttribute("data-default");
+        hint.classList.remove("money-readout");
+      });
+      setPressed(null);
+      if (form.elements.district) form.elements.district.focus();
     });
-    Array.prototype.forEach.call(form.querySelectorAll(".has-error"), function (f) { f.classList.remove("has-error"); });
-    Array.prototype.forEach.call(moneyInputs, function (el) {
-      var hint = document.getElementById(el.id + "-hint");
-      hint.textContent = hint.getAttribute("data-default");
-      hint.classList.remove("money-readout");
-    });
-    setPressed(null);
-    form.elements.district.focus();
-  });
+  }
 
   // ---- Light client-side check so errors show inline before the round trip ----
   form.addEventListener("submit", function (e) {
@@ -84,7 +96,11 @@
       field.classList.toggle("has-error", bad);
       var hint = field.querySelector(".hint");
       if (bad) {
-        hint.textContent = el.validity.valueMissing ? "Required." : (el.validationMessage || "Check this value.");
+        if (isBn) {
+          hint.textContent = el.validity.valueMissing ? "আবশ্যক।" : (el.validationMessage || "মানটি পরীক্ষা করুন।");
+        } else {
+          hint.textContent = el.validity.valueMissing ? "Required." : (el.validationMessage || "Check this value.");
+        }
         if (!firstBad) firstBad = el;
       }
     });
