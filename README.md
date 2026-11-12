@@ -1,4 +1,4 @@
-# SME Risk Detector
+# SME Loan Risk Analysis
 
 Flask web app that serves the notebook's best model (GradientBoosting pipeline)
 and predicts SME loan risk: High, Medium or Low. Includes bilingual support (English & বাংলা).

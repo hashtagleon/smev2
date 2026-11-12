@@ -1,8 +1,8 @@
-"""Bilingual translations (English and Bengali) for SME Risk Detector."""
+"""Bilingual translations (English and Bengali) for SME Loan Risk Analysis."""
 
 TRANSLATIONS = {
     "en": {
-        "app_title": "SME Risk Detector",
+        "app_title": "SME Loan Risk Analysis",
         "app_tagline": "Automated SME Credit Risk Appraisal Platform",
         "step_1": "Step 1 of 2: applicant details",
         "step_2": "Step 2 of 2: result",
@@ -82,7 +82,7 @@ TRANSLATIONS = {
     },
     
     "bn": {
-        "app_title": "এসএমই ঝুঁকি নিরূপণ",
+        "app_title": "এসএমই লোন ঝুঁকি বিশ্লেষণ",
         "app_tagline": "স্বয়ংক্রিয় এসএমই ঋণ ঝুঁকি মূল্যায়ন প্ল্যাটফর্ম",
         "step_1": "ধাপ ১/২: আবেদনকারীর বিবরণ",
         "step_2": "ধাপ ২/২: ফলাফল",

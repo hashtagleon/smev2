@@ -1,4 +1,4 @@
-"""SME Risk Detector - Flask app.
+"""SME Loan Risk Analysis - Flask app.
 
 Loads the scikit-learn pipeline saved from the notebook (best_model.pkl)
 and serves a two-step flow: applicant form -> risk result.
