@@ -1,12 +1,8 @@
 """SME Risk Detector - Flask app.
 
 Loads the scikit-learn pipeline saved from the notebook (best_model.pkl)
-and serves a high-trust credit assessment flow:
-- Predictive Risk Scoring (Gradient Boosting)
-- Financial Health Ratios & 5-Pillar Credit Radar Chart
-- Bilingual Support (English & বাংলা)
-- Portfolio Analytics & Audit Logging (SQLite)
-- AI-Generated Executive Credit Memo & Policy Recommendations
+and serves a two-step flow: applicant form -> risk result.
+Includes bilingual English & বাংলা support.
 
 Run locally:   python app.py
 Run on Render: gunicorn app:app   (see Procfile / render.yaml)
@@ -22,7 +18,6 @@ import pandas as pd
 import scipy.sparse as sp
 from flask import (
     Flask,
-    Response,
     g,
     jsonify,
     redirect,
@@ -32,27 +27,15 @@ from flask import (
 )
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from analytics_db import (
-    export_csv_data,
-    get_analytics_summary,
-    init_db,
-    save_assessment,
-)
-from credit_summary import generate_credit_summary
-from ratios_radar import calculate_advanced_ratios, calculate_credit_radar
 from translations import (
     DISTRICT_MAP,
     LOCATION_MAP,
     SECTOR_MAP,
-    TRANSLATIONS,
     localize,
     localize_value,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
-
-# Initialize SQLite database
-init_db()
 
 
 # --------------------------------------------------------------------------
@@ -181,6 +164,16 @@ def predict(values):
     }
 
 
+def ratios(values):
+    loan = values["loan_amount"]
+    revenue = values["annual_revenue"]
+    collateral = values["collateral_value"]
+    return {
+        "loan_to_revenue": loan / revenue if revenue else None,
+        "collateral_cover": collateral / loan if loan else None,
+    }
+
+
 # --------------------------------------------------------------------------
 # Demo presets
 # --------------------------------------------------------------------------
@@ -195,7 +188,7 @@ PRESETS = {
     },
     "medium": {
         "title": "Established trading shop",
-        "title_bn": "মাঝারি ট্রেডিং ও পাইকারি প্রতিষ্ঠান",
+        "title_bn": "প্রতিষ্ঠিত ট্রেডিং শপ",
         "values": dict(district="Sylhet", location_type="urban", sector="trading",
                        business_age_years=16, owner_experience_years=2, banking_years=7,
                        annual_revenue=3600000, loan_amount=1690000, debt_to_asset_ratio=0.69,
@@ -203,7 +196,7 @@ PRESETS = {
     },
     "low": {
         "title": "Secured agro business",
-        "title_bn": "সুরক্ষিত জামানতযুক্ত কৃষি খামার",
+        "title_bn": "সুরক্ষিত কৃষি ব্যবসা",
         "values": dict(district="Khulna", location_type="rural", sector="agriculture",
                        business_age_years=13, owner_experience_years=9, banking_years=5,
                        annual_revenue=6400000, loan_amount=2920000, debt_to_asset_ratio=0.58,
@@ -268,23 +261,6 @@ def num_filter(value):
     return f"{int(value):,}"
 
 
-@app.template_filter("taka_fmt")
-def taka_fmt_filter(n):
-    if not n or n <= 0:
-        return "০ টাকা" if getattr(g, "lang", "en") == "bn" else "0 BDT"
-    lang = getattr(g, "lang", "en")
-    if n >= 1e7:
-        val = n / 1e7
-        unit = "কোটি টাকা" if lang == "bn" else "Crore BDT"
-        return f"{val:.2f} {unit}"
-    elif n >= 1e5:
-        val = n / 1e5
-        unit = "লাখ টাকা" if lang == "bn" else "Lakh BDT"
-        return f"{val:.2f} {unit}"
-    else:
-        return f"{n:,.0f} " + ("টাকা" if lang == "bn" else "BDT")
-
-
 def form_context(values=None, errors=None):
     return {
         "categories": CATEGORIES,
@@ -319,23 +295,13 @@ def predict_page():
     values, errors = parse_form(request.form)
     if errors:
         return render_template("index.html", **form_context(dict(request.form), errors)), 400
-    
     result = predict(values)
-    ratios = calculate_advanced_ratios(values)
-    radar = calculate_credit_radar(values)
-    memo = generate_credit_summary(values, result, ratios, getattr(g, "lang", "en"))
-    
-    # Save to SQLite Audit Log
-    save_assessment(values, result)
-    
     edit_url = url_for("index") + "?" + urlencode(values)
     return render_template(
         "result.html",
         values=values,
         result=result,
-        ratios=ratios,
-        radar=radar,
-        memo=memo,
+        ratios=ratios(values),
         labels=LABELS,
         edit_url=edit_url,
         demo=None,
@@ -347,43 +313,18 @@ def demo(key):
     preset = PRESETS.get(key)
     if preset is None:
         return redirect(url_for("index"))
-    
     values = preset["values"]
-    result = preset["result"]
-    ratios = calculate_advanced_ratios(values)
-    radar = calculate_credit_radar(values)
-    memo = generate_credit_summary(values, result, ratios, getattr(g, "lang", "en"))
-    
-    demo_title = preset["title_bn"] if getattr(g, "lang", "en") == "bn" else preset["title"]
-    save_assessment(values, result, demo_title=demo_title)
-    
+    lang = getattr(g, "lang", "en")
+    demo_title = preset["title_bn"] if lang == "bn" else preset["title"]
     edit_url = url_for("index") + "?" + urlencode(values)
     return render_template(
         "result.html",
         values=values,
-        result=result,
-        ratios=ratios,
-        radar=radar,
-        memo=memo,
+        result=preset["result"],
+        ratios=ratios(values),
         labels=LABELS,
         edit_url=edit_url,
         demo=demo_title,
-    )
-
-
-@app.get("/analytics")
-def analytics():
-    data = get_analytics_summary()
-    return render_template("analytics.html", **data)
-
-
-@app.get("/analytics/export")
-def analytics_export():
-    csv_text = export_csv_data()
-    return Response(
-        csv_text,
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=sme_risk_audit_log.csv"}
     )
 
 
@@ -394,14 +335,10 @@ def api_predict():
     if errors:
         return jsonify({"ok": False, "errors": errors}), 400
     res = predict(values)
-    ratios = calculate_advanced_ratios(values)
-    memo = generate_credit_summary(values, res, ratios, getattr(g, "lang", "en"))
-    save_assessment(values, res, demo_title="API Request")
     return jsonify({
         "ok": True,
         **res,
-        "ratios": ratios,
-        "executive_memo": memo
+        "ratios": ratios(values)
     })
 
 

@@ -103,16 +103,10 @@
     <div class="actions">
       <button type="submit" class="btn btn-primary">{{ t('btn_predict') }}</button>
       <a class="btn btn-quiet" id="demo-link" href="{{ url_for('demo', key='high') }}">
-        {% if lang == 'bn' %}নমুনা ফলাফল দেখুন{% else %}View demo result{% endif %}
+        {{ t('demo_result') }}
       </a>
       <button type="button" class="btn btn-text" id="clear-btn">{{ t('btn_clear') }}</button>
-      <p class="actions-note">
-        {% if lang == 'bn' %}
-          পরবর্তী পাতায় বিস্তারিত ঝুঁকি বিশ্লেষণ, ক্রেডিট রাডার চার্ট ও এআই এক্সিকিউটিভ মেমো প্রদর্শিত হবে।
-        {% else %}
-          The next page generates a comprehensive credit memo, 5-pillar radar chart, and risk probabilities.
-        {% endif %}
-      </p>
+      <p class="actions-note">{{ t('form_footer_note') }}</p>
     </div>
   </form>
 {% endblock %}
