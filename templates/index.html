@@ -37,7 +37,7 @@
           <span class="dot dot-{{ key }}" aria-hidden="true"></span>
           <span class="sample-text">
             <strong>{{ p.title_bn if lang == 'bn' else p.title }}</strong>
-            <span>{{ loc_val(key, 'risk_level') }}, {{ p.result.confidence|pct }}</span>
+            <span>{{ p.desc_bn if lang == 'bn' else p.desc }} &bull; {{ p.result.confidence|pct }}</span>
           </span>
         </button>
       </li>

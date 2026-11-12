@@ -179,24 +179,30 @@ def ratios(values):
 # --------------------------------------------------------------------------
 PRESETS = {
     "high": {
-        "title": "Leveraged textile unit",
-        "title_bn": "উচ্চ ঋণগ্রস্ত টেক্সটাইল কারখানা",
+        "title": "High Risk",
+        "title_bn": "উচ্চ ঝুঁকি (High Risk)",
+        "desc": "Leveraged textile unit",
+        "desc_bn": "উচ্চ ঋণগ্রস্ত টেক্সটাইল কারখানা",
         "values": dict(district="Khulna", location_type="semi_urban", sector="textiles",
                        business_age_years=2, owner_experience_years=20, banking_years=3,
                        annual_revenue=5850000, loan_amount=2140000, debt_to_asset_ratio=1.21,
                        num_employees=11, collateral_value=0, past_defaults=0),
     },
     "medium": {
-        "title": "Established trading shop",
-        "title_bn": "প্রতিষ্ঠিত ট্রেডিং শপ",
+        "title": "Medium Risk",
+        "title_bn": "মাঝারি ঝুঁকি (Medium Risk)",
+        "desc": "Established trading shop",
+        "desc_bn": "প্রতিষ্ঠিত ট্রেডিং শপ",
         "values": dict(district="Sylhet", location_type="urban", sector="trading",
                        business_age_years=16, owner_experience_years=2, banking_years=7,
                        annual_revenue=3600000, loan_amount=1690000, debt_to_asset_ratio=0.69,
                        num_employees=24, collateral_value=510000, past_defaults=0),
     },
     "low": {
-        "title": "Secured agro business",
-        "title_bn": "সুরক্ষিত কৃষি ব্যবসা",
+        "title": "Low Risk",
+        "title_bn": "নিম্ন ঝুঁকি (Low Risk)",
+        "desc": "Secured agro business",
+        "desc_bn": "সুরক্ষিত কৃষি ব্যবসা",
         "values": dict(district="Khulna", location_type="rural", sector="agriculture",
                        business_age_years=13, owner_experience_years=9, banking_years=5,
                        annual_revenue=6400000, loan_amount=2920000, debt_to_asset_ratio=0.58,
@@ -315,7 +321,7 @@ def demo(key):
         return redirect(url_for("index"))
     values = preset["values"]
     lang = getattr(g, "lang", "en")
-    demo_title = preset["title_bn"] if lang == "bn" else preset["title"]
+    demo_title = (preset["title_bn"] if lang == "bn" else preset["title"]) + f" ({preset['desc_bn'] if lang == 'bn' else preset['desc']})"
     edit_url = url_for("index") + "?" + urlencode(values)
     return render_template(
         "result.html",
