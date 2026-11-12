@@ -321,7 +321,7 @@ def demo(key):
         return redirect(url_for("index"))
     values = preset["values"]
     lang = getattr(g, "lang", "en")
-    demo_title = (preset["title_bn"] if lang == "bn" else preset["title"]) + f" ({preset['desc_bn'] if lang == 'bn' else preset['desc']})"
+    demo_title = preset["title_bn"] if lang == "bn" else preset["title"]
     edit_url = url_for("index") + "?" + urlencode(values)
     return render_template(
         "result.html",
